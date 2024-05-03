@@ -11,12 +11,12 @@ from interactions_lavalink import Lavalink, Player
 from interactions_lavalink.events import TrackStart
 from lavalink.models import LoadResult
 
-from spotify_loader import SearchSpotify
-from spotify_api import Spotify
-from config_loader import load_config
+from utils.spotify_loader import SearchSpotify
+from utils.spotify_api import Spotify
+from utils.config_loader import load_config
 from utils.fancy_send import fancy_message
 
-spotify = Spotify(client_id=load_config('music', 'spotify', 'id'), secret=load_config('music', 'spotify', 'secret'))
+spotify = Spotify(client_id=load_config('api', 'spotify', 'id'), secret=load_config('api', 'spotify', 'secret'))
 
 class Music(Extension):
 
@@ -49,8 +49,8 @@ class Music(Extension):
         if track is None:
             return
         
-        bar_empty = load_config('bot_customization', 'bar_empty')
-        bar_filled = load_config('bot_customization', 'bar_filled')
+        bar_empty = '░'
+        bar_filled = '█'
 
         progress_bar_length = 15
         current_time = round((player.position / track.duration) * progress_bar_length)
@@ -412,9 +412,6 @@ class Music(Extension):
     async def autocomplete(self, ctx: AutocompleteContext):
 
         text = ctx.input_text
-
-        if text == '':
-            text = 'Snails House'
 
         raw_text = text
 
