@@ -1,0 +1,4 @@
+PyYAML
+discord-py-interactions
+lavalink
+interactions-lavalink
