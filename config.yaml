@@ -1,0 +1,19 @@
+TOKEN: 0 # Put your bot token here.
+
+api:
+  lavalink:
+    ip: 00.00.00.00
+    port: 12345
+    password: your-password-here
+
+  spotify:
+    secret: 1234a
+    id: 1234a
+
+# General bot customization.
+bot_customization:
+  activity_type: 2 # 0: Nothing. 1: Playing. 2: Listening. 3: Watching.
+  activity: music.
+
+  bar_empty: '░'
+  bar_filled: '█'
