@@ -1,5 +1,7 @@
-# config.yaml
+config.yaml
 # ^^ MAKE SURE TO UNCOMMENT THIS WHENEVER YOU UPLOAD YOUR BOT TO GITHUB OR ANYTHING ELSE!!!!
 
 */__pycache__/
 *.pyc
+/lavalink/
+/src/SiIvaGunner Rips - SiIvaGunner.csv

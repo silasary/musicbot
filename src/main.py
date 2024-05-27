@@ -13,6 +13,7 @@ activity_type: Union[ActivityType, None] = activity_types[activity_id]
 activity = Activity(load_config('bot_customization', 'activity'), activity_type)
 
 client = Client(activity=activity)
+client.load_extension('interactions.ext.jurigged')
 
 load_modules(client)
 

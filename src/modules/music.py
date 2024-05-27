@@ -9,20 +9,37 @@ from interactions import *
 from interactions.api.events import *
 from interactions_lavalink import Lavalink, Player
 from interactions_lavalink.events import TrackStart
-from lavalink.models import LoadResult
+from lavalink import LoadResult
+import csv
 
-from utils.spotify_loader import SearchSpotify
-from utils.spotify_api import Spotify
-from utils.config_loader import load_config
+from spotify_loader import SearchSpotify
+from spotify_api import Spotify
+from config_loader import load_config
 from utils.fancy_send import fancy_message
 
 spotify = Spotify(client_id=load_config('api', 'spotify', 'id'), secret=load_config('api', 'spotify', 'secret'))
+with open('src/SiIvaGunner Rips - SiIvaGunner.csv', 'r') as file:
+    data = csv.reader(file)
+    songs = [r[0] for r in data]
 
 class Music(Extension):
 
     def __init__(self, client):
-        self.client = client
+        self.client: Client = client
         self.lavalink: Lavalink | None = None
+
+    async def queue_random(self, player: Player):
+        if player.queue:
+            print('Queue already has songs.')
+            return
+        s = random.choice(songs)
+        result = await self.lavalink.client.get_tracks('https://www.youtube.com/watch?v=' + s, check_local=True)
+
+        if not result.tracks:
+            songs.pop(songs.index(s))
+            return await self.queue_random(player)
+
+        player.add(result.tracks[0], requester=self.client.user.id)
 
     @listen()
     async def on_ready(self):
@@ -37,6 +54,15 @@ class Music(Extension):
         self.lavalink.client.register_source(SearchSpotify())
 
         print("Music Command Loaded.")
+
+        await self.update_rips()
+
+    async def update_rips(self):
+        with aiohttp.ClientSession() as session:
+            rips = await session.get("https://docs.google.com/spreadsheets/d/1B7b9jEaWiqZI8Z8CzvFN1cBvLVYwjb5xzhWtrgs4anI/gviz/tq?tqx=out:csv&sheet=SiIvaGunner")
+            content = await rips.text()
+            with open('src/SiIvaGunner Rips - SiIvaGunner.csv', 'w') as file:
+                file.write(content)
 
     @slash_command(description="Listen to music!")
     async def music(self, ctx: SlashContext):
@@ -94,7 +120,8 @@ class Music(Extension):
             author = song.author
             requester = await self.bot.fetch_user(song.requester)
 
-            queue_list = f'{queue_list}**{i}**. ***{title}*** by {author} - {requester.mention}\n'
+            req = requester.mention if requester else ""
+            queue_list = f'{queue_list}**{i}**. ***{title}*** by {author} - {req}\n'
 
             i += 1
 
@@ -125,6 +152,8 @@ class Music(Extension):
         return queue_embed
 
     async def can_modify(self, player: Player, author: User, guild_id: Snowflake):
+        if not player.current:
+            return True
 
         requester_member: Member = await self.bot.fetch_member(player.current.requester, guild_id)
 
@@ -413,6 +442,9 @@ class Music(Extension):
 
         text = ctx.input_text
 
+        if not text:
+            return await ctx.send([])
+
         raw_text = text
 
         if len(text) > 25:
@@ -484,13 +516,24 @@ class Music(Extension):
             return
 
         if len(channel.voice_members) <= 2:
-            text_channel = player.fetch('Channel')
+            # text_channel = player.fetch('Channel')
 
-            await fancy_message(text_channel, f'Everyone has disconnected from {channel.mention}. To stop playing music, please use ``/music stop``.')
+            # await fancy_message(text_channel, f'Everyone has disconnected from {channel.mention}. To stop playing music, please use ``/music stop``.')
+            await self.lavalink.disconnect(event.author.guild.id)
+
+    @listen()
+    async def voice_state_join(self, event: VoiceUserJoin):
+        if event.author.bot:
+            return
+        if event.channel.name == "lofi beets":
+            player = await self.lavalink.connect(event.channel.guild.id, event.channel.id)
+            player.store('Channel', event.channel)
+            await self.queue_random(player)
+            if not player.is_playing:
+                await player.play()
 
     @staticmethod
     def get_buttons():
-
         return [
             Button(
                 style=ButtonStyle.BLUE,
@@ -624,6 +667,10 @@ class Music(Extension):
 
                 await asyncio.sleep(1)
 
+        await self.queue_random(player)
+        await player.play()
+        return
+    
         embed = Embed(
             title=stopped_track.title,
             url=stopped_track.uri,
@@ -638,7 +685,7 @@ class Music(Extension):
 
         embed.set_footer(text='Requested by ' + requester.username, icon_url=requester.avatar_url)
 
-        message = await message.edit(content='<:nikosleepy:1027492467337080872>', embed=embed, components=[])
+        message = await message.edit(content='💤', embed=embed, components=[])
 
     @component_callback('queue', 'loop', 'playpause', 'skip', 'lyrics')
     async def buttons(self, ctx: ComponentContext):
