@@ -151,19 +151,23 @@ class Music(Extension):
 
         return queue_embed
 
-    async def can_modify(self, player: Player, author: User, guild_id: Snowflake):
+    async def can_modify(self, player: Player, author: Member, guild_id: Snowflake):
         if not player.current:
             return True
 
         requester_member: Member = await self.bot.fetch_member(player.current.requester, guild_id)
 
-        voice_state = requester_member.voice
+        user_voice_state = author.voice
+        requester_voice_state = requester_member.voice
 
         if Permissions.MANAGE_CHANNELS in author.guild_permissions:
             return True
 
-        if not voice_state or not voice_state.channel:
+        if not user_voice_state or not user_voice_state.channel:
             return False
+        
+        if not requester_voice_state or not requester_voice_state.channel:
+            return True
 
         if int(author.id) == player.current.requester:
             return True
