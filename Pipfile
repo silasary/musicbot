@@ -8,6 +8,8 @@ pyyaml = "*"
 discord-py-interactions = "*"
 lavalink = "*"
 interactions-lavalink = "*"
+jurigged = "*"
+isodate = "*"
 
 [dev-packages]
 

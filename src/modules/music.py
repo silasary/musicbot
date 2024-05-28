@@ -2,7 +2,11 @@ import asyncio
 import random
 import uuid
 from urllib import parse
+import os
+import datetime
+import isodate
 
+import attrs
 import aiohttp
 import lavalink
 from interactions import *
@@ -17,10 +21,25 @@ from spotify_api import Spotify
 from config_loader import load_config
 from utils.fancy_send import fancy_message
 
+
+@attrs.define()
+class Song:
+    id: str
+    duration: datetime.timedelta
+
 spotify = Spotify(client_id=load_config('api', 'spotify', 'id'), secret=load_config('api', 'spotify', 'secret'))
-with open('src/SiIvaGunner Rips - SiIvaGunner.csv', 'r') as file:
-    data = csv.reader(file)
-    songs = [r[0] for r in data]
+
+def load_songs():
+    if os.path.exists('src/SiIvaGunner Rips - SiIvaGunner.csv'):
+        with open('src/SiIvaGunner Rips - SiIvaGunner.csv', 'r') as file:
+            data = csv.reader(file)
+            headers = next(data)
+            songs = [Song(r[0], isodate.parse_duration(r[5])) for r in data if r[3] == "Public"]
+    else:
+        songs = []
+    return songs
+
+songs = load_songs()
 
 class Music(Extension):
 
@@ -33,7 +52,7 @@ class Music(Extension):
             print('Queue already has songs.')
             return
         s = random.choice(songs)
-        result = await self.lavalink.client.get_tracks('https://www.youtube.com/watch?v=' + s, check_local=True)
+        result = await self.lavalink.client.get_tracks('https://www.youtube.com/watch?v=' + s.id, check_local=True)
 
         if not result.tracks:
             songs.pop(songs.index(s))
@@ -58,7 +77,7 @@ class Music(Extension):
         await self.update_rips()
 
     async def update_rips(self):
-        with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession() as session:
             rips = await session.get("https://docs.google.com/spreadsheets/d/1B7b9jEaWiqZI8Z8CzvFN1cBvLVYwjb5xzhWtrgs4anI/gviz/tq?tqx=out:csv&sheet=SiIvaGunner")
             content = await rips.text()
             with open('src/SiIvaGunner Rips - SiIvaGunner.csv', 'w') as file:
