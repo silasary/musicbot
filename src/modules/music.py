@@ -47,19 +47,6 @@ class Music(Extension):
         self.client: Client = client
         self.lavalink: Lavalink | None = None
 
-    async def queue_random(self, player: Player):
-        if player.queue:
-            print('Queue already has songs.')
-            return
-        s = random.choice(songs)
-        result = await self.lavalink.client.get_tracks('https://www.youtube.com/watch?v=' + s.id, check_local=True)
-
-        if not result.tracks:
-            songs.pop(songs.index(s))
-            return await self.queue_random(player)
-
-        player.add(result.tracks[0], requester=self.client.user.id)
-
     @listen()
     async def on_ready(self):
         # Initializing lavalink instance on bot startup
@@ -639,6 +626,20 @@ class Music(Extension):
 
         return Embed(title=f'{track.title} Lyrics', description=lyrics, color=0x2B2D31, footer=EmbedFooter(text=f'Lyrics provided by Some Random API'))
 
+    async def queue_random(self, player: Player):
+        if player.queue:
+            print('Queue already has songs.')
+            return
+        s = random.choice(songs)
+        result = await self.lavalink.client.get_tracks('https://www.youtube.com/watch?v=' + s.id, check_local=True)
+
+        if not result.tracks:
+            songs.pop(songs.index(s))
+            return await self.queue_random(player)
+
+        player.add(result.tracks[0], requester=self.client.user.id)
+
+
     async def on_player(self, player: Player, channel: GuildText):
 
         if player.loop == 1:
@@ -690,9 +691,10 @@ class Music(Extension):
 
                 await asyncio.sleep(1)
 
-        await self.queue_random(player)
-        await player.play()
-        return
+        if player_uid == player.fetch('uid'):
+            await self.queue_random(player)
+            await player.play()
+            return
     
         embed = Embed(
             title=stopped_track.title,
