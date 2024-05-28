@@ -68,7 +68,7 @@ class Music(Extension):
             print('Lavalink node not available.')
             if node_information['ip'] == '127.0.0.1' and os.path.exists('Lavalink.jar'):
                 print('Attempting to start Lavalink...')
-                _pid = subprocess.Popen('java -jar Lavalink.jar').pid
+                _pid = subprocess.Popen('java -jar Lavalink.jar', shell=True).pid
 
             return
 
