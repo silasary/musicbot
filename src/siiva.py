@@ -35,7 +35,10 @@ class Song:
         return sum(get_play_count(user_id, self.id) for user_id in user_ids)
 
     def weight(self, *user_ids: int) -> int:
-        return self.views // 1000 - self.total_play_count(*user_ids)
+        score = self.views // 1000 - self.total_play_count(*user_ids)
+        if self.duration.total_seconds() < 15:
+            score -= 100
+        return score
     
 def load_songs():
     if os.path.exists('src/SiIvaGunner Rips - SiIvaGunner.csv'):
