@@ -12,6 +12,7 @@ play_count: dict[int, dict[str, int]] = {}
 recently_played = queue.Queue(maxsize=100)
 
 
+blacklist = ["dveUfTkxiIQ"]
 
 def get_play_count(user_id: int, song_id: str) -> int:
     return play_count.get(user_id, {}).get(song_id, 0)
@@ -47,9 +48,10 @@ def load_songs():
             i_length = headers.index("Length")
             songs = []
             for r in data:
-                if r[i_vidstatus] == "Public" and "announcment" not in r[i_title].lower():
+                ytid = r[0]
+                if r[i_vidstatus] == "Public" and ytid not in blacklist:
                     songs.append(
-                        Song(id=r[0], 
+                        Song(id=ytid, 
                              views=int(r[i_views]), 
                              duration=isodate.parse_duration(r[i_length]),
                              ))
