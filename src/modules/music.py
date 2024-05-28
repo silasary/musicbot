@@ -4,43 +4,25 @@ import subprocess
 import uuid
 from urllib import parse
 import os
-import datetime
-import isodate
+import time
 
-import attrs
 import aiohttp
 import lavalink
 from interactions import *
 from interactions.api.events import *
+from interactions.models import Extension
 from interactions_lavalink import Lavalink, Player
 from interactions_lavalink.events import TrackStart
 from lavalink import LoadResult
-import csv
 
 from spotify_loader import SearchSpotify
 from spotify_api import Spotify
 from config_loader import load_config
 from utils.fancy_send import fancy_message
+import siiva
 
-
-@attrs.define()
-class Song:
-    id: str
-    duration: datetime.timedelta
 
 spotify = Spotify(client_id=load_config('api', 'spotify', 'id'), secret=load_config('api', 'spotify', 'secret'))
-
-def load_songs():
-    if os.path.exists('src/SiIvaGunner Rips - SiIvaGunner.csv'):
-        with open('src/SiIvaGunner Rips - SiIvaGunner.csv', 'r') as file:
-            data = csv.reader(file)
-            headers = next(data)
-            songs = [Song(r[0], isodate.parse_duration(r[5])) for r in data if r[3] == "Public"]
-    else:
-        songs = []
-    return songs
-
-songs = load_songs()
 
 class Music(Extension):
 
@@ -62,7 +44,7 @@ class Music(Extension):
 
         print("Music Command Loaded.")
 
-        await self.update_rips()
+        await siiva.update_rips()
 
         if not node.available:
             print('Lavalink node not available.')
@@ -71,13 +53,6 @@ class Music(Extension):
                 _pid = subprocess.Popen('java -jar Lavalink.jar', shell=True).pid
 
             return
-
-    async def update_rips(self):
-        async with aiohttp.ClientSession() as session:
-            rips = await session.get("https://docs.google.com/spreadsheets/d/1B7b9jEaWiqZI8Z8CzvFN1cBvLVYwjb5xzhWtrgs4anI/gviz/tq?tqx=out:csv&sheet=SiIvaGunner")
-            content = await rips.text()
-            with open('src/SiIvaGunner Rips - SiIvaGunner.csv', 'w') as file:
-                file.write(content)
 
     @slash_command(description="Listen to music!")
     async def music(self, ctx: SlashContext):
@@ -635,15 +610,20 @@ class Music(Extension):
 
         return Embed(title=f'{track.title} Lyrics', description=lyrics, color=0x2B2D31, footer=EmbedFooter(text=f'Lyrics provided by Some Random API'))
 
-    async def queue_random(self, player: Player):
+    async def queue_random(self, player: Player, *listeners: int) -> None:
         if player.queue:
             print('Queue already has songs.')
             return
-        s = random.choice(songs)
+        
+        t = time.perf_counter()
+        s = siiva.choose_random_song(*listeners)
+        d = time.perf_counter() - t
+        print(f'Chose song {s.id} in {d} seconds with weight {s.weight(*listeners)} for {repr(listeners)}.')
+
         result = await self.lavalink.client.get_tracks('https://www.youtube.com/watch?v=' + s.id, check_local=True)
 
         if not result.tracks:
-            songs.pop(songs.index(s))
+            siiva.songs.pop(siiva.songs.index(s))
             return await self.queue_random(player)
 
         player.add(result.tracks[0], requester=self.client.user.id)
@@ -710,9 +690,16 @@ class Music(Extension):
             vc = self.client.get_channel(player.channel_id)
             if len(vc.voice_members) < 2:
                 return
-
-            await self.queue_random(player)
+            listeners = [p.id for p in vc.voice_members if not p.bot]
+            await self.queue_random(player, *listeners)
             await player.play()
+            if stopped_track.uri.startswith('https://www.youtube.com/watch?v='):
+                yt_id = stopped_track.uri.split('v=')[1]
+                for p in vc.voice_members:
+                    if p.bot:
+                        continue
+                    siiva.increment_play_count(p.id, yt_id)
+                siiva.save_play_counts()
             return
     
         embed = Embed(
@@ -735,6 +722,7 @@ class Music(Extension):
     async def buttons(self, ctx: ComponentContext):
 
         player: Player = self.lavalink.get_player(ctx.guild_id)
+        msg = None
 
         if player is None:
             return
