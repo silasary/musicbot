@@ -5,3 +5,7 @@ config.yaml
 *.pyc
 /lavalink/
 /src/SiIvaGunner Rips - SiIvaGunner.csv
+/application.yml
+/Lavalink.jar
+/logs/
+/plugins/

@@ -1,5 +1,6 @@
 import asyncio
 import random
+import subprocess
 import uuid
 from urllib import parse
 import os
@@ -48,20 +49,28 @@ class Music(Extension):
         self.lavalink: Lavalink | None = None
 
     @listen()
-    async def on_ready(self):
+    async def on_startup(self):
         # Initializing lavalink instance on bot startup
         self.lavalink: Lavalink = Lavalink(self.client)
 
         node_information: dict = load_config('api', 'lavalink')
 
         # Connecting to local lavalink server
-        self.lavalink.add_node(node_information['ip'], node_information['port'], node_information['password'], "us")
+        node = self.lavalink.add_node(node_information['ip'], node_information['port'], node_information['password'], "us")
 
         self.lavalink.client.register_source(SearchSpotify())
 
         print("Music Command Loaded.")
 
         await self.update_rips()
+
+        if not node.available:
+            print('Lavalink node not available.')
+            if node_information['ip'] == '127.0.0.1' and os.path.exists('Lavalink.jar'):
+                print('Attempting to start Lavalink...')
+                _pid = subprocess.Popen('java -jar Lavalink.jar').pid
+
+            return
 
     async def update_rips(self):
         async with aiohttp.ClientSession() as session:
