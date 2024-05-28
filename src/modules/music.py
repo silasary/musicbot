@@ -686,7 +686,7 @@ class Music(Extension):
                     main_buttons[2].label = 'Pause'
                     main_buttons[2].style = ButtonStyle.BLUE
 
-                user = await self.bot.fetch_member(player.current.requester, player.guild_id)
+                user = await self.client.fetch_member(player.current.requester, player.guild_id)
 
                 can_control: bool = False
 
@@ -700,7 +700,17 @@ class Music(Extension):
 
                 await asyncio.sleep(1)
 
+                vc = self.client.get_channel(player.channel_id)
+
+                if len(vc.voice_members) < 2:
+                    await self.lavalink.disconnect(player.guild_id)
+                    return
+
         if player_uid == player.fetch('uid'):
+            vc = self.client.get_channel(player.channel_id)
+            if len(vc.voice_members) < 2:
+                return
+
             await self.queue_random(player)
             await player.play()
             return
