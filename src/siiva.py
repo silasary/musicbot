@@ -43,20 +43,16 @@ class Song:
 def load_songs():
     if os.path.exists('src/SiIvaGunner Rips - SiIvaGunner.csv'):
         with open('src/SiIvaGunner Rips - SiIvaGunner.csv', 'r') as file:
-            data = csv.reader(file)
-            headers = next(data)
-            i_title = headers.index("Title")
-            i_vidstatus = headers.index("Video Status")
-            i_views = headers.index("Views")
-            i_length = headers.index("Length")
+            data = csv.DictReader(file)
             songs = []
             for r in data:
-                ytid = r[0]
-                if r[i_vidstatus] == "Public" and ytid not in blacklist:
+                ytid = r["ID"]
+                if r["Video Status"] == "Public" and ytid not in blacklist:
+                    duration = isodate.parse_duration(r["Length"]) if r["Length"] else datetime.timedelta(seconds=0)
                     songs.append(
                         Song(id=ytid, 
-                             views=int(r[i_views]), 
-                             duration=isodate.parse_duration(r[i_length]),
+                             views=int(r["Views"]), 
+                             duration=duration,
                              ))
     else:
         songs = []
